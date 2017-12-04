@@ -15,16 +15,29 @@ import (
 	"github.com/nfnt/resize"
 )
 
+var (
+	noResize = flag.Bool("noresize", false, "Do not resize.")
+)
+
 func main() {
+	var maxH uint64
+	var maxW uint64
 	flag.Parse()
-	if flag.NArg() < 3 {
-		fmt.Printf("Usage: %s <FileName> <maxWidth> <maxHeight>\n", path.Base(os.Args[0]))
-		os.Exit(1)
+	if *noResize {
+		if flag.NArg() < 1 {
+			fmt.Printf("Usage: %s resize <FileName>\n", path.Base(os.Args[0]))
+			os.Exit(1)
+		}
+	} else {
+		if flag.NArg() < 3 {
+			fmt.Printf("Usage: %s <FileName> <maxWidth> <maxHeight>\n", path.Base(os.Args[0]))
+			os.Exit(1)
+		}
+		maxW, _ = strconv.ParseUint(flag.Arg(1), 10, 64)
+		maxH, _ = strconv.ParseUint(flag.Arg(2), 10, 64)
 	}
 
 	pngfile := flag.Arg(0)
-	maxW, _ := strconv.ParseUint(flag.Arg(1), 10, 64)
-	maxH, _ := strconv.ParseUint(flag.Arg(2), 10, 64)
 
 	infile, err := os.Open(pngfile)
 	if err != nil {
@@ -42,23 +55,26 @@ func main() {
 	}
 
 	// resize image
-	src = resize.Thumbnail(uint(maxW), uint(maxH), src, resize.Bicubic)
+	if !*noResize {
+		src = resize.Thumbnail(uint(maxW), uint(maxH), src, resize.MitchellNetravali)
+	}
 
 	// Create a new grayscale image
 	bounds := src.Bounds()
 	gray := image.NewGray16(bounds.Bounds())
 
 	name := strings.TrimSuffix(path.Base(pngfile), filepath.Ext(pngfile))
-	fmt.Printf("import framebuf\n")
 	fmt.Printf("%s = framebuf.FrameBuffer(bytearray([", name)
-	for y := 0; y < bounds.Dy(); y += 8 {
+	for y := 0; y < bounds.Dy(); y += 7 {
 		for x := 0; x < bounds.Dx(); x++ {
 			var b uint8 = 0
 			for by := 0; by < 8; by++ {
 				oldColor := src.At(x, y)
 				_, _, _, a := oldColor.RGBA()
-				if a > 32767 {
+				//fmt.Printf("{%d 0x%x %d} ", a, b, by)
+				if a > 1000 {
 					b |= 1 << uint(by)
+					//fmt.Printf("{%d 0x%x %d 0x%x} ", a, b, by, 1<<uint(by))
 				}
 			}
 			fmt.Printf("0x%x, ", b)
@@ -72,7 +88,7 @@ func main() {
 			oldColor := src.At(x, y)
 			_, _, _, a := oldColor.RGBA()
 			var pixel uint16 = 0
-			if a > 32767 {
+			if a > 10 {
 				pixel = 65535
 			}
 			gray.Set(x, y, color.Gray16{pixel})
