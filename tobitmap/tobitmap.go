@@ -17,6 +17,7 @@ import (
 
 var (
 	noResize = flag.Bool("noresize", false, "Do not resize.")
+	level    = flag.Uint64("level", 32767, "Gray level to set monocrome")
 )
 
 func main() {
@@ -62,34 +63,16 @@ func main() {
 	// Create a new grayscale image
 	bounds := src.Bounds()
 	gray := image.NewGray16(bounds.Bounds())
-
-	name := strings.TrimSuffix(path.Base(pngfile), filepath.Ext(pngfile))
-	fmt.Printf("%s = framebuf.FrameBuffer(bytearray([", name)
-	for y := 0; y < bounds.Dy(); y += 8 {
-		for x := 0; x < bounds.Dx(); x++ {
-			var b uint8 = 0
-			for by := 0; by < 8; by++ {
-				oldColor := src.At(x, by+y)
-				_, _, _, a := oldColor.RGBA()
-				if a > 1000 {
-					b |= 1 << uint(by)
-				}
-			}
-			fmt.Printf("0x%x, ", b)
-		}
-		fmt.Printf("\n")
-	}
-	fmt.Printf("]), %d, %d, framebuf.MONO_VLSB)\n", src.Bounds().Dx(), src.Bounds().Dy())
-
 	for y := 0; y < bounds.Dy(); y++ {
 		for x := 0; x < bounds.Dx(); x++ {
 			oldColor := src.At(x, y)
-			_, _, _, a := oldColor.RGBA()
-			var pixel uint16 = 0
-			if a > 10 {
-				pixel = 65535
+			pixel := color.Gray16Model.Convert(oldColor)
+			p, _, _, _ := pixel.RGBA()
+			c := color.Gray16{Y: 0}
+			if p > uint32(*level) {
+				c = color.Gray16{Y: 65535}
 			}
-			gray.Set(x, y, color.Gray16{pixel})
+			gray.Set(x, y, c)
 		}
 	}
 
@@ -101,4 +84,24 @@ func main() {
 	}
 	defer outfile.Close()
 	png.Encode(outfile, gray)
+
+	name := strings.TrimSuffix(path.Base(pngfile), filepath.Ext(pngfile))
+	fmt.Printf("%s = framebuf.FrameBuffer(bytearray([", name)
+	for y := 0; y < bounds.Dy(); y += 8 {
+		for x := 0; x < bounds.Dx(); x++ {
+			var b uint8 = 0
+			for by := 0; by < 8; by++ {
+				oldPixel := src.At(x, by+y)
+				pixel := color.Gray16Model.Convert(oldPixel)
+				p, _, _, _ := pixel.RGBA()
+				if p > uint32(*level) {
+					b |= 1 << uint(by)
+				}
+			}
+			fmt.Printf("0x%x, ", b)
+		}
+		fmt.Printf("\n")
+	}
+	fmt.Printf("]), %d, %d, framebuf.MONO_VLSB)\n", src.Bounds().Dx(), src.Bounds().Dy())
+
 }
