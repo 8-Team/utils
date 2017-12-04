@@ -65,11 +65,11 @@ func main() {
 
 	name := strings.TrimSuffix(path.Base(pngfile), filepath.Ext(pngfile))
 	fmt.Printf("%s = framebuf.FrameBuffer(bytearray([", name)
-	for y := 0; y < bounds.Dy(); y += 7 {
+	for y := 0; y < bounds.Dy(); y += 8 {
 		for x := 0; x < bounds.Dx(); x++ {
 			var b uint8 = 0
 			for by := 0; by < 8; by++ {
-				oldColor := src.At(x, by)
+				oldColor := src.At(x, by+y)
 				_, _, _, a := oldColor.RGBA()
 				if a > 1000 {
 					b |= 1 << uint(by)
