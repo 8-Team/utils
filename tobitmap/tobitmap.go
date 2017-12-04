@@ -69,12 +69,10 @@ func main() {
 		for x := 0; x < bounds.Dx(); x++ {
 			var b uint8 = 0
 			for by := 0; by < 8; by++ {
-				oldColor := src.At(x, y)
+				oldColor := src.At(x, by)
 				_, _, _, a := oldColor.RGBA()
-				//fmt.Printf("{%d 0x%x %d} ", a, b, by)
 				if a > 1000 {
 					b |= 1 << uint(by)
-					//fmt.Printf("{%d 0x%x %d 0x%x} ", a, b, by, 1<<uint(by))
 				}
 			}
 			fmt.Printf("0x%x, ", b)
