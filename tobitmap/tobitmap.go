@@ -18,6 +18,7 @@ import (
 var (
 	noResize = flag.Bool("noresize", false, "Do not resize.")
 	level    = flag.Uint64("level", 32767, "Gray level to set monocrome")
+	channel  = flag.String("channel", "a", "Select color [r,g,b,a]")
 )
 
 func main() {
@@ -67,9 +68,23 @@ func main() {
 		for x := 0; x < bounds.Dx(); x++ {
 			oldColor := src.At(x, y)
 			pixel := color.Gray16Model.Convert(oldColor)
-			p, _, _, _ := pixel.RGBA()
+			var ch uint32
+			r, g, b, a := pixel.RGBA()
+			if r == 0 && b == 0 && g == 0 {
+				r, g, b, a = oldColor.RGBA()
+			}
+			switch *channel {
+			case "r":
+				ch = r
+			case "g":
+				ch = g
+			case "b":
+				ch = b
+			case "a":
+				ch = a
+			}
 			c := color.Gray16{Y: 0}
-			if p > uint32(*level) {
+			if ch > uint32(*level) {
 				c = color.Gray16{Y: 65535}
 			}
 			gray.Set(x, y, c)
@@ -93,8 +108,22 @@ func main() {
 			for by := 0; by < 8; by++ {
 				oldPixel := src.At(x, by+y)
 				pixel := color.Gray16Model.Convert(oldPixel)
-				p, _, _, _ := pixel.RGBA()
-				if p > uint32(*level) {
+				var ch uint32
+				cr, cg, cb, ca := pixel.RGBA()
+				if cr == 0 && cb == 0 && cg == 0 {
+					cr, cg, cb, ca = oldPixel.RGBA()
+				}
+				switch *channel {
+				case "r":
+					ch = cr
+				case "g":
+					ch = cg
+				case "b":
+					ch = cb
+				case "a":
+					ch = ca
+				}
+				if ch > uint32(*level) {
 					b |= 1 << uint(by)
 				}
 			}
